@@ -64,7 +64,22 @@ class PatientResponse(BaseModel):
 app.counter = 0
 
 
+#@app.post("/patient")
+#def receive_patient(patient: PatientResponse):
+#    app.counter += 1
+#    return {"id": app.counter, "patient": patient}
+
+app.patients = []
+
 @app.post("/patient")
-def receive_patient(patient: PatientResponse):
+def patient_with_saving(patient: PatientResponse):
     app.counter += 1
+    app.patients.append(patient)
     return {"id": app.counter, "patient": patient}
+
+@app.get("/patient/{pk}")
+def get_patient_by_id(pk: int):
+    if pk > app.counter or pk < 0:
+        return 404
+    else:
+        return app.patients[pk-1]
