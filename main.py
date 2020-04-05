@@ -4,7 +4,6 @@ from fastapi import FastAPI
 
 from pydantic import BaseModel
 
-
 app = FastAPI()
 
 
@@ -80,6 +79,6 @@ def patient_with_saving(patient: PatientResponse):
 @app.get("/patient/{pk}")
 def get_patient_by_id(pk: int):
     if pk > app.counter or pk < 0:
-        return 404
+        return 204
     else:
         return app.patients[pk-1]
