@@ -3,6 +3,8 @@ from typing import Dict
 from fastapi import FastAPI
 
 from pydantic import BaseModel
+from requests import Response
+from starlette.status import HTTP_204_NO_CONTENT
 
 app = FastAPI()
 
@@ -79,6 +81,6 @@ def patient_with_saving(patient: PatientResponse):
 @app.get("/patient/{pk}")
 def get_patient_by_id(pk: int):
     if pk > app.counter or pk < 0:
-        return 204
+        return Response(status_code=HTTP_204_NO_CONTENT)
     else:
         return app.patients[pk-1]
