@@ -54,3 +54,17 @@ def method_put():
 @app.delete("/method")
 def method_delete():
     return {"method":"DELETE"}
+
+
+class PatientResponse(BaseModel):
+    name: str
+    surename: str
+
+
+app.counter = 0
+
+
+@app.post("/patient")
+def receive_patient(patient: PatientResponse):
+    app.counter += 1
+    return {"id": app.counter, "patient": patient}
