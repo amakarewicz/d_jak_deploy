@@ -1,6 +1,6 @@
 from typing import Dict
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 from pydantic import BaseModel
 from requests import Response
@@ -81,6 +81,6 @@ def patient_with_saving(patient: PatientResponse):
 @app.get("/patient/{pk}")
 def get_patient_by_id(pk: int):
     if pk > app.counter or pk < 0:
-        return Response(status_code=HTTP_204_NO_CONTENT)
+        raise HTTPException(status_code=204, detail="No content")
     else:
         return app.patients[pk-1]
