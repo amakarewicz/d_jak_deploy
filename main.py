@@ -84,3 +84,9 @@ def get_patient_by_id(pk: int):
         raise HTTPException(status_code=204, detail="No content")
     else:
         return app.patients[pk-1]
+
+### FICZUR
+
+@app.get("/welcome")
+def welcome():
+	return {"message": "Welcome! Bienvenido! Benvenuto! Willkommen!"}
