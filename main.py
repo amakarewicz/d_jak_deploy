@@ -2,7 +2,7 @@ import secrets
 from hashlib import sha256
 from typing import Dict
 
-from fastapi import FastAPI, HTTPException, Depends, Response, status, Request
+from fastapi import FastAPI, HTTPException, Depends, Response, status, Cookie
 from fastapi.security import HTTPBasicCredentials, HTTPBasic
 from starlette.responses import RedirectResponse
 
@@ -99,23 +99,24 @@ security = HTTPBasic()
 app.session_tokens = []
 app.secret_key = "very constatn and random secret, best 64 characters, here it is."
 
-# @app.post("/login")
-# def user_credentials(response: Response, credentials: HTTPBasicCredentials = Depends(security)):
-#     user_correct = secrets.compare_digest(credentials.username, "trudnY")
-#     pass_correct = secrets.compare_digest(credentials.password, "PaC13Nt")
-#     if not (user_correct and pass_correct):
-#         raise HTTPException(status_code=401, detail="Wrong username or password")
-
-
 @app.post("/login")
-def get_current_user(response: Response, credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username = secrets.compare_digest(credentials.username, "trudnY")
-    correct_password = secrets.compare_digest(credentials.password, "PaC13Nt")
-    if not (correct_username and correct_password):
-        raise HTTPException(status_code=401, detail="Incorrect email or password")
+def login_auth(response: Response, credentials: HTTPBasicCredentials = Depends(security)):
+    user_check = secrets.compare_digest(credentials.username, "trudnY")
+    pass_check = secrets.compare_digest(credentials.password, "PaC13Nt")
+    if not (user_check and pass_check):
+        raise HTTPException(status_code=401, detail="Wrong username or password")
     session_token = sha256(
         bytes(f"{credentials.username}{credentials.password}{app.secret_key}", encoding='utf8')).hexdigest()
     app.session_tokens.append(session_token)
     response.set_cookie(key="session_token", value=session_token)
     response.headers["Location"] = "/welcome"
+    response.status_code = status.HTTP_302_FOUND
+
+
+@app.post("/logout")
+def logout_check(*, response: Response, session_token: str = Cookie(None)):
+    if session_token not in app.session_tokens:
+        raise HTTPException(status_code=403, detail="Login required")
+    app.session_tokens.remove(session_token)
+    response.headers["Location"] = "/"
     response.status_code = status.HTTP_302_FOUND
