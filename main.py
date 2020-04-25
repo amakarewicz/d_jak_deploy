@@ -1,13 +1,14 @@
 import secrets
-from _sha256 import sha256
+from hashlib import sha256
 from typing import Dict
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Response, status, Request
 from fastapi.security import HTTPBasicCredentials, HTTPBasic
+from starlette.responses import RedirectResponse
 
 from pydantic import BaseModel
-from requests import Response
-from starlette import status
+# from requests import Response
+# from starlette import status
 
 app = FastAPI()
 
@@ -94,18 +95,27 @@ def get_patient_by_id(pk: int):
 def welcome():
 	return {"message": "Welcome! Bienvenido! Benvenuto! Willkommen!"}
 
-# security = HTTPBasic()
-# app.session_tokens = []
-# app.secret_key = "very constatn and random secret, best 64 characters, here it is."
-#
+security = HTTPBasic()
+app.session_tokens = []
+app.secret_key = "very constatn and random secret, best 64 characters, here it is."
+
 # @app.post("/login")
 # def user_credentials(response: Response, credentials: HTTPBasicCredentials = Depends(security)):
 #     user_correct = secrets.compare_digest(credentials.username, "trudnY")
 #     pass_correct = secrets.compare_digest(credentials.password, "PaC13Nt")
 #     if not (user_correct and pass_correct):
 #         raise HTTPException(status_code=401, detail="Wrong username or password")
-#     session_token = sha256(bytes(f"{credentials.username}{credentials.password}{app.secret_key}", encoding='utf8')).hexdigest()
-#     app.session_tokens.append(session_token)
-#     response.set_cookie(key="session_token", value=session_token)
-#     response.headers["Location"] = "/welcome"
-#     response.status_code = status.HTTP_302_FOUND
+
+
+@app.post("/login")
+def get_current_user(response: Response, credentials: HTTPBasicCredentials = Depends(security)):
+    correct_username = secrets.compare_digest(credentials.username, "trudnY")
+    correct_password = secrets.compare_digest(credentials.password, "PaC13Nt")
+    if not (correct_username and correct_password):
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+    session_token = sha256(
+        bytes(f"{credentials.username}{credentials.password}{app.secret_key}", encoding='utf8')).hexdigest()
+    app.session_tokens.append(session_token)
+    response.set_cookie(key="session_token", value=session_token)
+    response.headers["Location"] = "/welcome"
+    response.status_code = status.HTTP_302_FOUND
