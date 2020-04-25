@@ -2,13 +2,10 @@ import secrets
 from hashlib import sha256
 from typing import Dict
 
-from fastapi import FastAPI, HTTPException, Depends, Response, status, Cookie
+from fastapi import FastAPI, HTTPException, Depends, Response, status, Cookie, Request
 from fastapi.security import HTTPBasicCredentials, HTTPBasic
-from starlette.responses import RedirectResponse
 
 from pydantic import BaseModel
-# from requests import Response
-# from starlette import status
 
 app = FastAPI()
 
@@ -91,9 +88,18 @@ def get_patient_by_id(pk: int):
 
 ### FICZUR
 
+from fastapi.templating import Jinja2Templates
+
+templates = Jinja2Templates(directory="templates")
+
+
 @app.get("/welcome")
-def welcome():
-	return {"message": "Welcome! Bienvenido! Benvenuto! Willkommen!"}
+def welcome(request: Request, session_token: str = Cookie(None)):
+    if session_token not in app.session_tokens:
+        raise HTTPException(status_code=403, detail="Login required")
+    return templates.TemplateResponse("greeting.html", {"request": request, "user": "trudnY"})
+
+	# return {"message": "Welcome! Bienvenido! Benvenuto! Willkommen!"}
 
 security = HTTPBasic()
 app.session_tokens = []
@@ -101,10 +107,10 @@ app.secret_key = "very constatn and random secret, best 64 characters, here it i
 
 @app.post("/login")
 def login_auth(response: Response, credentials: HTTPBasicCredentials = Depends(security)):
-    user_check = secrets.compare_digest(credentials.username, "trudnY")
-    pass_check = secrets.compare_digest(credentials.password, "PaC13Nt")
-    if not (user_check and pass_check):
-        raise HTTPException(status_code=401, detail="Wrong username or password")
+    correct_username  = secrets.compare_digest(credentials.username, "trudnY")
+    correct_password  = secrets.compare_digest(credentials.password, "PaC13Nt")
+    if not (correct_username and correct_password ):
+        raise HTTPException(status_code=401,  detail="Incorrect email or password", headers={"WWW-Authenticate": "Basic"})
     session_token = sha256(
         bytes(f"{credentials.username}{credentials.password}{app.secret_key}", encoding='utf8')).hexdigest()
     app.session_tokens.append(session_token)
