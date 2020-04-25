@@ -96,7 +96,7 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/welcome")
 def welcome(request: Request, session_token: str = Cookie(None)):
     if session_token not in app.session_tokens:
-        raise HTTPException(status_code=403, detail="Login required")
+        raise HTTPException(status_code=401, detail="Login required")
     return templates.TemplateResponse("greeting.html", {"request": request, "user": "trudnY"})
 
 	# return {"message": "Welcome! Bienvenido! Benvenuto! Willkommen!"}
