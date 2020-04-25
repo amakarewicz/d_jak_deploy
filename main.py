@@ -94,18 +94,18 @@ def get_patient_by_id(pk: int):
 def welcome():
 	return {"message": "Welcome! Bienvenido! Benvenuto! Willkommen!"}
 
-security = HTTPBasic()
-app.session_tokens = []
-app.secret_key = "very constatn and random secret, best 64 characters, here it is."
-
-@app.post("/login")
-def user_credentials(response: Response, credentials: HTTPBasicCredentials = Depends(security)):
-    user_correct = secrets.compare_digest(credentials.username, "trudnY")
-    pass_correct = secrets.compare_digest(credentials.password, "PaC13Nt")
-    if not (user_correct and pass_correct):
-        raise HTTPException(status_code=401, detail="Wrong username or password")
-    session_token = sha256(bytes(f"{credentials.username}{credentials.password}{app.secret_key}", encoding='utf8')).hexdigest()
-    app.session_tokens.append(session_token)
-    response.set_cookie(key="session_token", value=session_token)
-    response.headers["Location"] = "/welcome"
-    response.status_code = status.HTTP_302_FOUND
+# security = HTTPBasic()
+# app.session_tokens = []
+# app.secret_key = "very constatn and random secret, best 64 characters, here it is."
+#
+# @app.post("/login")
+# def user_credentials(response: Response, credentials: HTTPBasicCredentials = Depends(security)):
+#     user_correct = secrets.compare_digest(credentials.username, "trudnY")
+#     pass_correct = secrets.compare_digest(credentials.password, "PaC13Nt")
+#     if not (user_correct and pass_correct):
+#         raise HTTPException(status_code=401, detail="Wrong username or password")
+#     session_token = sha256(bytes(f"{credentials.username}{credentials.password}{app.secret_key}", encoding='utf8')).hexdigest()
+#     app.session_tokens.append(session_token)
+#     response.set_cookie(key="session_token", value=session_token)
+#     response.headers["Location"] = "/welcome"
+#     response.status_code = status.HTTP_302_FOUND
