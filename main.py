@@ -106,6 +106,6 @@ def user_credentials(response: Response, credentials: HTTPBasicCredentials = Dep
         raise HTTPException(status_code=401, detail="Wrong username or password")
     session_token = sha256(bytes(f"{credentials.username}{credentials.password}{app.secret_key}", encoding='utf8')).hexdigest()
     app.session_tokens.append(session_token)
-    response.headers["Location"] = "/welcome"
     response.set_cookie(key="session_token", value=session_token)
+    response.headers["Location"] = "/welcome"
     response.status_code = status.HTTP_302_FOUND
