@@ -122,7 +122,16 @@ def login_auth(response: Response, credentials: HTTPBasicCredentials = Depends(s
 @app.post("/logout")
 def logout_check(*, response: Response, session_token: str = Cookie(None)):
     if session_token not in app.session_tokens:
-        raise HTTPException(status_code=403, detail="Login required")
+        raise HTTPException(status_code=401, detail="Login required")
     app.session_tokens.remove(session_token)
     response.headers["Location"] = "/"
     response.status_code = status.HTTP_302_FOUND
+
+@app.post("/patient")
+def add_patient(response: Response, session_token: str = Cookie(None)):
+    if session_token not in app.session_tokens:
+        raise HTTPException(status_code=401, detail="Login required")
+    response.headers["Location"] = "/patient/{id}"
+    response.status_code = status.HTTP_302_FOUND
+
+
