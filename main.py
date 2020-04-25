@@ -128,10 +128,20 @@ def logout_check(*, response: Response, session_token: str = Cookie(None)):
     response.status_code = status.HTTP_302_FOUND
 
 @app.post("/patient")
-def add_patient(response: Response, session_token: str = Cookie(None)):
+def add_patient(response: Response, patient: PatientResponse, session_token: str = Cookie(None)):
     if session_token not in app.session_tokens:
         raise HTTPException(status_code=401, detail="Login required")
+    patient_with_saving(patient)
+    response.set_cookie(key="session_token", value=session_token)
     response.headers["Location"] = "/patient/{id}"
     response.status_code = status.HTTP_302_FOUND
+
+
+@app.post("/patient/{id}")
+def display_patient(response: Response, patient_id: int, session_token: str = Cookie(None)):
+    if session_token not in app.session_tokens:
+        raise HTTPException(status_code=401, detail="Unathorised")
+    response.set_cookie(key="session_token", value=session_token)
+    get_patient_by_id(patient_id)
 
 
