@@ -73,13 +73,13 @@ app.counter = 0
 
 app.patients = []
 
-@app.post("/patient")
+#@app.post("/patient")
 def patient_with_saving(patient: PatientResponse):
     app.counter += 1
     app.patients.append(patient)
     return {"id": app.counter, "patient": patient}
 
-@app.get("/patient/{pk}")
+#@app.get("/patient/{pk}")
 def get_patient_by_id(pk: int):
     if pk > app.counter or pk < 0:
         raise HTTPException(status_code=204, detail="No content")
