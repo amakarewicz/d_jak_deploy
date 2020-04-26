@@ -136,7 +136,9 @@ def add_patient(request: PatientResponse, response: Response ,session_token: str
 def display_patients(response: Response, session_token: str = Cookie(None)):
     if session_token not in app.session_tokens:
        raise HTTPException(status_code=401, detail="Login required")
-    return app.patients
+    if len(app.patients) != 0:
+        return app.patients
+    response.status_code = status.HTTP_204_NO_CONTENT
 
 @app.get("/patient/{pk}")
 def get_patient_by_id(response: Response, pk: int, session_token: str = Cookie(None)):
