@@ -71,7 +71,7 @@ app.counter = 0
 #    app.counter += 1
 #    return {"id": app.counter, "patient": patient}
 
-app.patients = []
+app.patients = {}
 
 #@app.post("/patient")
 # def patient_with_saving(patient: PatientResponse):
