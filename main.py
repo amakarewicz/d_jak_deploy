@@ -64,7 +64,7 @@ class PatientResponse(BaseModel):
 
 
 app.counter = 0
-app.patients = []
+app.patients = dict()
 
 #@app.post("/patient")
 # def patient_with_saving(patient: PatientResponse):
