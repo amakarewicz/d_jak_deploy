@@ -128,7 +128,7 @@ def add_patient(request: PatientResponse, response: Response ,session_token: str
         raise HTTPException(status_code=401, detail="Login required")
     app.patients[app.counter] = request.dict()
     app.counter = app.counter+1
-    response.headers["Location"] = f"/patient/{app.counter}"
+    response.headers["Location"] = f"/patient/{app.counter-1}"
     response.status_code = status.HTTP_302_FOUND
     return response
 
