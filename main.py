@@ -64,22 +64,15 @@ class PatientResponse(BaseModel):
 
 
 app.counter = 0
-
-
-#@app.post("/patient")
-#def receive_patient(patient: PatientResponse):
-#    app.counter += 1
-#    return {"id": app.counter, "patient": patient}
-
-app.patients = {}
+app.patients = []
 
 #@app.post("/patient")
 # def patient_with_saving(patient: PatientResponse):
 #     app.counter += 1
 #     app.patients.append(patient)
 #     return {"id": app.counter, "patient": patient}
-#
-# #@app.get("/patient/{pk}")
+
+#@app.get("/patient/{pk}")
 # def get_patient_by_id(pk: int):
 #     if pk > app.counter or pk < 0:
 #         raise HTTPException(status_code=204, detail="No content")
@@ -105,11 +98,13 @@ security = HTTPBasic()
 app.session_tokens = []
 app.secret_key = "very constatn and random secret, best 64 characters, here it is."
 
+
+
 @app.post("/login")
 def login_auth(response: Response, credentials: HTTPBasicCredentials = Depends(security)):
-    correct_username  = secrets.compare_digest(credentials.username, "trudnY")
-    correct_password  = secrets.compare_digest(credentials.password, "PaC13Nt")
-    if not (correct_username and correct_password ):
+    correct_username = secrets.compare_digest(credentials.username, "trudnY")
+    correct_password = secrets.compare_digest(credentials.password, "PaC13Nt")
+    if not (correct_username and correct_password):
         raise HTTPException(status_code=401,  detail="Incorrect email or password", headers={"WWW-Authenticate": "Basic"})
     session_token = sha256(
         bytes(f"{credentials.username}{credentials.password}{app.secret_key}", encoding='utf8')).hexdigest()
@@ -127,77 +122,40 @@ def logout_check(*, response: Response, session_token: str = Cookie(None)):
     response.headers["Location"] = "/"
     response.status_code = status.HTTP_302_FOUND
 
-
-# @app.post("/patient")
-# def add_patient(response: Response, patient: PatientResponse, session_token: str = Cookie(None)):
-#     if session_token not in app.session_tokens:
-#         raise HTTPException(status_code=401, detail="Login required")
-#     if app.counter not in app.patients:
-#         app.counter += 1
-#         app.patients.append(patient)
-#     # response.set_cookie(key="session_token", value=session_token)
-#     # response.headers["Location"] = f"/patient/{app.counter - 1}"
-#     # response.status_code = status.HTTP_302_FOUND
-#     pid=f"id_{app.next_patient_id}"
-#     app.patients[pid]=patient.dict()
-#     response.status_code = status.HTTP_302_FOUND
-#     response.headers["Location"] = f"/patient/{pid}"
-#     app.next_patient_id+=1
-#
-#
-# @app.get("/patient")
-# def display_patients(response: Response, session_token: str = Cookie(None)):
-#     if session_token not in app.session_tokens:
-#         raise HTTPException(status_code=401, detail="Login required")
-#     return app.patients
-#
-#
-# @app.get("/patient/{id}")
-# def display_patient(response: Response, id: int, session_token: str = Cookie(None)):
-#     if session_token not in app.session_tokens:
-#         raise HTTPException(status_code=401, detail="Login required")
-#     response.set_cookie(key="session_token", value=session_token)
-#     if id in app.patients:
-#         return app.patients[id]
-#     response.status_code = status.HTTP_204_NO_CONTENT
-#
-#
-# @app.delete("/patient/{id}")
-# def delete_patient(response: Response, id: int, session_token: str = Cookie(None)):
-#     if session_token not in app.session_tokens:
-#         raise HTTPException(status_code=401, detail="Login required")
-#     app.patients.pop(id, None)
-#     response.status_code = status.HTTP_204_NO_CONTENT
-
 @app.post("/patient")
-def add_patient(response: Response, patient: PatientResponse, session_token: str = Cookie(None)):
-    if session_token is None:
+def add_patient(request: PatientResponse, response: Response ,session_token: str = Cookie(None)):
+    if session_token not in app.session_tokens:
         raise HTTPException(status_code=401, detail="Login required")
-    pid=f"id_{app.counter}"
-    app.patients[pid]=patient.dict()
+    app.patients[app.counter] = request.dict()
+    app.counter = app.counter+1
+    response.headers["Location"] = f"/patient/{app.counter}"
     response.status_code = status.HTTP_302_FOUND
-    response.headers["Location"] = f"/patient/{pid}"
-    app.counter+=1
+    return response
 
 @app.get("/patient")
-def get_all_patients(response: Response, session_token: str = Cookie(None)):
-    if session_token is None:
-        raise HTTPException(status_code=401, detail="Login required")
-    if len(app.patients) != 0:
-        return app.patients
-    response.status_code = status.HTTP_204_NO_CONTENT
+def display_patients(response: Response, session_token: str = Cookie(None)):
+    if session_token not in app.session_tokens:
+       raise HTTPException(status_code=401, detail="Login required")
+    return app.patients
 
-@app.get("/patient/{pid}")
-def get_patient(pid: str, response: Response, session_token: str = Cookie(None)):
-    if session_token is None:
+@app.get("/patient/{pk}")
+def get_patient_by_id(response: Response, pk: int, session_token: str = Cookie(None)):
+    if session_token not in app.session_tokens:
         raise HTTPException(status_code=401, detail="Login required")
-    if pid in app.patients:
-        return app.patients[pid]
-    response.status_code = status.HTTP_204_NO_CONTENT
+    if pk in app.patients:
+        return app.patients[pk]
+    else:
+        raise HTTPException(204, "Such patient doesn't exist")
 
-@app.delete("/patient/{pid}")
-def remove_patient(pid: str, response: Response, session_token: str = Cookie(None)):
-    if session_token is None:
+
+@app.delete("/patient/{pk}")
+def delete_patient(response: Response, pk: int, session_token: str = Cookie(None)):
+    if session_token not in app.session_tokens:
         raise HTTPException(status_code=401, detail="Login required")
-    app.patients.pop(pid, None)
-    response.status_code = status.HTTP_204_NO_CONTENT
+    if pk in app.patients:
+        app.patients.pop(pk)
+        response.headers["Location"]="/patient"
+        response.status_code = status.HTTP_302_FOUND
+        return response
+    else:
+        raise HTTPException(204)
