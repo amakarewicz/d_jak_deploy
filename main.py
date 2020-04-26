@@ -10,16 +10,9 @@ from pydantic import BaseModel
 app = FastAPI()
 app.patients={}
 app.next_patient_id=0
-app.sessions={}
+#app.sessions={}
 
 MESSAGE_UNAUTHORIZED = "Log in to access this page."
-
-def check_cookie(session_token: str = Cookie(None)):
-    if session_token not in app.sessions:
-        session_token = None
-    return session_token
-app = FastAPI()
-
 
 @app.get("/")
 def root():
@@ -95,7 +88,9 @@ class PatientResponse(BaseModel):
 from fastapi.templating import Jinja2Templates
 
 templates = Jinja2Templates(directory="templates")
-
+security = HTTPBasic()
+app.session_tokens = []
+app.secret_key = "very constatn and random secret, best 64 characters, here it is."
 
 @app.get("/welcome")
 def welcome(request: Request, session_token: str = Cookie(None)):
@@ -104,12 +99,6 @@ def welcome(request: Request, session_token: str = Cookie(None)):
     return templates.TemplateResponse("greeting.html", {"request": request, "user": "trudnY"})
 
     # return {"message": "Welcome! Bienvenido! Benvenuto! Willkommen!"}
-
-security = HTTPBasic()
-app.session_tokens = []
-app.secret_key = "very constatn and random secret, best 64 characters, here it is."
-
-
 
 @app.post("/login")
 def login_auth(response: Response, credentials: HTTPBasicCredentials = Depends(security)):
@@ -179,8 +168,8 @@ class PatientRq(BaseModel):
     surname: str
 
 @app.post("/patient")
-def add_patient(response: Response, rq: PatientRq, session_token: str = Depends(check_cookie)):
-    if session_token is None:
+def add_patient(response: Response, rq: PatientRq, session_token: str = Cookie(None)):
+    if session_token not in app.session_tokens:
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return MESSAGE_UNAUTHORIZED
     pid=f"id_{app.next_patient_id}"
@@ -190,8 +179,8 @@ def add_patient(response: Response, rq: PatientRq, session_token: str = Depends(
     app.next_patient_id+=1
 
 @app.get("/patient")
-def get_all_patients(response: Response, session_token: str = Depends(check_cookie)):
-    if session_token is None:
+def get_all_patients(response: Response, session_token: str = Cookie(None)):
+    if session_token not in app.session_tokens:
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return MESSAGE_UNAUTHORIZED
     if len(app.patients) != 0:
@@ -199,8 +188,8 @@ def get_all_patients(response: Response, session_token: str = Depends(check_cook
     response.status_code = status.HTTP_204_NO_CONTENT
 
 @app.get("/patient/{pid}")
-def get_patient(pid: str, response: Response, session_token: str = Depends(check_cookie)):
-    if session_token is None:
+def get_patient(pid: str, response: Response, session_token: str = Cookie(None)):
+    if session_token not in app.session_tokens:
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return MESSAGE_UNAUTHORIZED
     if pid in app.patients:
@@ -208,8 +197,8 @@ def get_patient(pid: str, response: Response, session_token: str = Depends(check
     response.status_code = status.HTTP_204_NO_CONTENT
 
 @app.delete("/patient/{pid}")
-def remove_patient(pid: str, response: Response, session_token: str = Depends(check_cookie)):
-    if session_token is None:
+def remove_patient(pid: str, response: Response, session_token: str = Cookie(None)):
+    if session_token not in app.session_tokens:
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return MESSAGE_UNAUTHORIZED
     app.patients.pop(pid, None)
