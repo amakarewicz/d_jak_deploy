@@ -74,17 +74,17 @@ app.counter = 0
 app.patients = []
 
 #@app.post("/patient")
-def patient_with_saving(patient: PatientResponse):
-    app.counter += 1
-    app.patients.append(patient)
-    return {"id": app.counter, "patient": patient}
-
-#@app.get("/patient/{pk}")
-def get_patient_by_id(pk: int):
-    if pk > app.counter or pk < 0:
-        raise HTTPException(status_code=204, detail="No content")
-    else:
-        return app.patients[pk-1]
+# def patient_with_saving(patient: PatientResponse):
+#     app.counter += 1
+#     app.patients.append(patient)
+#     return {"id": app.counter, "patient": patient}
+#
+# #@app.get("/patient/{pk}")
+# def get_patient_by_id(pk: int):
+#     if pk > app.counter or pk < 0:
+#         raise HTTPException(status_code=204, detail="No content")
+#     else:
+#         return app.patients[pk-1]
 
 ### FICZUR
 
@@ -128,38 +128,76 @@ def logout_check(*, response: Response, session_token: str = Cookie(None)):
     response.status_code = status.HTTP_302_FOUND
 
 
+# @app.post("/patient")
+# def add_patient(response: Response, patient: PatientResponse, session_token: str = Cookie(None)):
+#     if session_token not in app.session_tokens:
+#         raise HTTPException(status_code=401, detail="Login required")
+#     if app.counter not in app.patients:
+#         app.counter += 1
+#         app.patients.append(patient)
+#     # response.set_cookie(key="session_token", value=session_token)
+#     # response.headers["Location"] = f"/patient/{app.counter - 1}"
+#     # response.status_code = status.HTTP_302_FOUND
+#     pid=f"id_{app.next_patient_id}"
+#     app.patients[pid]=patient.dict()
+#     response.status_code = status.HTTP_302_FOUND
+#     response.headers["Location"] = f"/patient/{pid}"
+#     app.next_patient_id+=1
+#
+#
+# @app.get("/patient")
+# def display_patients(response: Response, session_token: str = Cookie(None)):
+#     if session_token not in app.session_tokens:
+#         raise HTTPException(status_code=401, detail="Login required")
+#     return app.patients
+#
+#
+# @app.get("/patient/{id}")
+# def display_patient(response: Response, id: int, session_token: str = Cookie(None)):
+#     if session_token not in app.session_tokens:
+#         raise HTTPException(status_code=401, detail="Login required")
+#     response.set_cookie(key="session_token", value=session_token)
+#     if id in app.patients:
+#         return app.patients[id]
+#     response.status_code = status.HTTP_204_NO_CONTENT
+#
+#
+# @app.delete("/patient/{id}")
+# def delete_patient(response: Response, id: int, session_token: str = Cookie(None)):
+#     if session_token not in app.session_tokens:
+#         raise HTTPException(status_code=401, detail="Login required")
+#     app.patients.pop(id, None)
+#     response.status_code = status.HTTP_204_NO_CONTENT
+
 @app.post("/patient")
 def add_patient(response: Response, patient: PatientResponse, session_token: str = Cookie(None)):
-    if session_token not in app.session_tokens:
+    if session_token is None:
         raise HTTPException(status_code=401, detail="Login required")
-    if app.counter not in app.patients.keys():
-        app.patients[app.counter] = patient.dict()
-        app.counter += 1
-    response.set_cookie(key="session_token", value=session_token)
-    response.headers["Location"] = f"/patient/{app.counter - 1}"
+    pid=f"id_{app.counter}"
+    app.patients[pid]=patient.dict()
     response.status_code = status.HTTP_302_FOUND
-
+    response.headers["Location"] = f"/patient/{pid}"
+    app.counter+=1
 
 @app.get("/patient")
-def display_patients(response: Response, session_token: str = Cookie(None)):
-    if session_token not in app.session_tokens:
+def get_all_patients(response: Response, session_token: str = Cookie(None)):
+    if session_token is None:
         raise HTTPException(status_code=401, detail="Login required")
-    return app.patients
-
-
-@app.get("/patient/{id}")
-def display_patient(response: Response, id: int, session_token: str = Cookie(None)):
-    if session_token not in app.session_tokens:
-        raise HTTPException(status_code=401, detail="Login required")
-    response.set_cookie(key="session_token", value=session_token)
-    if id in app.patients.keys():
-        return app.patients[id]
-
-
-@app.delete("/patient/{id}")
-def delete_patient(response: Response, id: int, session_token: str = Cookie(None)):
-    if session_token not in app.session_tokens:
-        raise HTTPException(status_code=401, detail="Login required")
-    app.patients.remove(id, None)
+    if len(app.patients) != 0:
+        return app.patients
     response.status_code = status.HTTP_204_NO_CONTENT
 
+@app.get("/patient/{pid}")
+def get_patient(pid: str, response: Response, session_token: str = Cookie(None)):
+    if session_token is None:
+        raise HTTPException(status_code=401, detail="Login required")
+    if pid in app.patients:
+        return app.patients[pid]
+    response.status_code = status.HTTP_204_NO_CONTENT
+
+@app.delete("/patient/{pid}")
+def remove_patient(pid: str, response: Response, session_token: str = Cookie(None)):
+    if session_token is None:
+        raise HTTPException(status_code=401, detail="Login required")
+    app.patients.pop(pid, None)
+    response.status_code = status.HTTP_204_NO_CONTENT
