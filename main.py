@@ -9,10 +9,7 @@ from pydantic import BaseModel
 
 app = FastAPI()
 app.patients={}
-app.next_patient_id=0
-#app.sessions={}
-
-MESSAGE_UNAUTHORIZED = "Log in to access this page."
+app.counter=0
 
 @app.get("/")
 def root():
@@ -62,9 +59,9 @@ def method_delete():
     return {"method":"DELETE"}
 
 
-class PatientResponse(BaseModel):
-    name: str
-    surename: str
+# class PatientResponse(BaseModel):
+#     name: str
+#     surename: str
 
 
 #app.counter = 0
@@ -122,47 +119,6 @@ def logout_check(*, response: Response, session_token: str = Cookie(None)):
     response.headers["Location"] = "/"
     response.status_code = status.HTTP_302_FOUND
 
-# @app.post("/patient")
-# def add_patient(request: PatientResponse, response: Response ,session_token: str = Cookie(None)):
-#     if session_token not in app.session_tokens:
-#         raise HTTPException(status_code=401, detail="Login required")
-#     app.patients[app.counter] = request.dict()
-#     app.counter = app.counter+1
-#     response.headers["Location"] = f"/patient/{app.counter-1}"
-#     response.status_code = status.HTTP_302_FOUND
-#     return response
-#
-# @app.get("/patient")
-# def display_patients(response: Response, session_token: str = Cookie(None)):
-#     if session_token not in app.session_tokens:
-#        raise HTTPException(status_code=401, detail="Login required")
-#     if len(app.patients) != 0:
-#         return app.patients
-#     response.status_code = status.HTTP_204_NO_CONTENT
-#
-# @app.get("/patient/{pk}")
-# def get_patient_by_id(response: Response, pk: int, session_token: str = Cookie(None)):
-#     if session_token not in app.session_tokens:
-#         raise HTTPException(status_code=401, detail="Login required")
-#     if pk in app.patients:
-#         return app.patients[pk]
-#     else:
-#         raise HTTPException(204, "Such patient doesn't exist")
-#
-#
-# @app.delete("/patient/{pk}")
-# def delete_patient(response: Response, pk: int, session_token: str = Cookie(None)):
-#     if session_token not in app.session_tokens:
-#         raise HTTPException(status_code=401, detail="Login required")
-#     if pk in app.patients:
-#         app.patients.pop(pk)
-#         response.headers["Location"]="/patient"
-#         response.status_code = status.HTTP_302_FOUND
-#         return response
-#     else:
-#         raise HTTPException(204)
-
-
 class PatientRq(BaseModel):
     name: str
     surname: str
@@ -171,35 +127,35 @@ class PatientRq(BaseModel):
 def add_patient(response: Response, rq: PatientRq, session_token: str = Cookie(None)):
     if session_token not in app.session_tokens:
         response.status_code = status.HTTP_401_UNAUTHORIZED
-        return MESSAGE_UNAUTHORIZED
-    pid=f"id_{app.next_patient_id}"
-    app.patients[pid]=rq.dict()
+        return "Login required"
+    pk=f"id_{app.counter}"
+    app.patients[pk]=rq.dict()
     response.status_code = status.HTTP_302_FOUND
-    response.headers["Location"] = f"/patient/{pid}"
-    app.next_patient_id+=1
+    response.headers["Location"] = f"/patient/{pk}"
+    app.counter+=1
 
 @app.get("/patient")
-def get_all_patients(response: Response, session_token: str = Cookie(None)):
+def get_patients_all(response: Response, session_token: str = Cookie(None)):
     if session_token not in app.session_tokens:
         response.status_code = status.HTTP_401_UNAUTHORIZED
-        return MESSAGE_UNAUTHORIZED
+        return "Login required"
     if len(app.patients) != 0:
         return app.patients
     response.status_code = status.HTTP_204_NO_CONTENT
 
-@app.get("/patient/{pid}")
-def get_patient(pid: str, response: Response, session_token: str = Cookie(None)):
+@app.get("/patient/{pk}")
+def get_patient(pk: str, response: Response, session_token: str = Cookie(None)):
     if session_token not in app.session_tokens:
         response.status_code = status.HTTP_401_UNAUTHORIZED
-        return MESSAGE_UNAUTHORIZED
-    if pid in app.patients:
-        return app.patients[pid]
+        return "Login required"
+    if pk in app.patients:
+        return app.patients[pk]
     response.status_code = status.HTTP_204_NO_CONTENT
 
-@app.delete("/patient/{pid}")
-def remove_patient(pid: str, response: Response, session_token: str = Cookie(None)):
+@app.delete("/patient/{pk}")
+def remove_patient(pk: str, response: Response, session_token: str = Cookie(None)):
     if session_token not in app.session_tokens:
         response.status_code = status.HTTP_401_UNAUTHORIZED
-        return MESSAGE_UNAUTHORIZED
-    app.patients.pop(pid, None)
+        return "Login required"
+    app.patients.pop(pk, None)
     response.status_code = status.HTTP_204_NO_CONTENT
