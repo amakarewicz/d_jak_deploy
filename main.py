@@ -1,4 +1,5 @@
 import secrets
+import sqlite3
 from hashlib import sha256
 from typing import Dict
 
@@ -159,3 +160,22 @@ def remove_patient(pk: str, response: Response, session_token: str = Cookie(None
         return "Login required"
     app.patients.pop(pk, None)
     response.status_code = status.HTTP_204_NO_CONTENT
+
+################## wyklad 4 ###########################
+
+@app.on_event("startup")
+async def startup():
+    app.db_connection = sqlite3.connect('chinook.db')
+
+@app.on_event("shutdown")
+async def shutdown():
+    app.db_connection.close()
+
+
+@app.get("/tracks")
+async def display_tracks(page: int = 0, per_page: int = 10):
+	app.db_connection.row_factory = sqlite3.Row
+	tracks = app.db_connection.execute(
+		f"SELECT * FROM tracks LIMIT {per_page} OFFSET {page*per_page}"
+		).fetchall()
+	return tracks
