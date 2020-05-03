@@ -222,3 +222,20 @@ async def display_album(album_id: int):
 	if len(album) <= 0:
 		raise HTTPException(status_code=404, detail={"error": "Item not found"})
 	return AlbumResponse(AlbumId=album_id, Title=album[0]["title"], ArtistId=album[0]["artistId"])
+
+@app.put("/customers/{customer_id}")
+async def update_customer(customer_id: int, rq: dict = {}):
+	app.db_connection.row_factory = sqlite3.Row
+	customer = app.db_connection.execute("SELECT * FROM customers WHERE customerId = ?",
+											(customer_id,)).fetchall()
+	if len(customer) <= 0:
+		raise HTTPException(status_code=404, detail={"error": "Item not found"})
+	query = "UPDATE customers SET "
+	for key in rq:
+		query += f"{key} = \'{rq[key]}\', "
+	query = query[:-2]
+	query += " WHERE customerId = " + str(customer_id)
+	app.db_connection.execute(query)
+	app.db_connection.commit()
+	return app.db_connection.execute("SELECT * FROM customers WHERE customerId = ?",
+											(customer_id,)).fetchone()
