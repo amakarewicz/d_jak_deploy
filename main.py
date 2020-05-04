@@ -171,97 +171,106 @@ async def startup():
 async def shutdown():
     app.db_connection.close()
 
-
+# 1
 @app.get("/tracks")
-async def display_tracks(page: int = 0, per_page: int = 10):
-	app.db_connection.row_factory = sqlite3.Row
-	tracks = app.db_connection.execute(
-		f"SELECT * FROM tracks LIMIT {per_page} OFFSET {page*per_page}"
-		).fetchall()
-	return tracks
+async def get_tracks(page: int = 0, per_page: int = 10):
+    app.db_connection.row_factory = sqlite3.Row
+    tracks = app.db_connection.execute(
+        f"SELECT * FROM tracksORDER BY TrackId LIMIT {per_page} OFFSET {per_page * (page)}"
+        ).fetchall()
+    return tracks
 
-
+# 2
 @app.get("/tracks/composers")
-async def display_titles(composer_name: str):
-	app.db_connection.row_factory = lambda cursor, row : row[0]
-	tracks = app.db_connection.execute(
-		"SELECT name FROM tracks WHERE composer = ? ORDER BY name",
-		(composer_name,)).fetchall()
-	if len(tracks) <= 0:
-		raise HTTPException(status_code=404, detail={"error": "Item not found"})
-	return tracks
+async def show_titles(composer_name: str):
+    app.db_connection.row_factory = lambda cursor, x : x[0]
+    tracks = app.db_connection.execute(
+        f'SELECT name FROM tracks WHERE composer = "{composer_name}" ORDER BY name').fetchall()
+    if len(tracks) <= 0:
+        raise HTTPException(status_code=404, detail={"error": "Item not found"})
+    return tracks
 
+# 3
 class AlbumRequest(BaseModel):
-	title: str
-	artist_id: int
+    title: str
+    artist_id: int
 
 
 class AlbumResponse(BaseModel):
-	AlbumId: int
-	Title: str
-	ArtistId: int
+    AlbumId: int
+    Title: str
+    ArtistId: int
 
 @app.post("/albums", response_model=AlbumResponse)
-async def insert_album(response: Response, rq: AlbumRequest):
-	artist = app.db_connection.execute("SELECT * FROM artists WHERE artistId = ?",
-									 	(rq.artist_id,)).fetchall()
-	if len(artist) <= 0:
-		raise HTTPException(status_code=404, detail={"error": "Item not found"})
-	cursor = app.db_connection.execute("INSERT INTO albums(title, artistId) VALUES (?,?)",
-										(rq.title,rq.artist_id))
-	app.db_connection.commit()
-	response.status_code = 201
-	return AlbumResponse(AlbumId=cursor.lastrowid, Title=rq.title, ArtistId=rq.artist_id)
+async def insert_album(response: Response, request: AlbumRequest):
+    app.db_connection.row_factory = sqlite3.Row
+    cursor = app.db_connection.cursor()
+    artist = cursor.execute("SELECT * FROM artists WHERE artistId = ?",
+                                        (request.artist_id,)).fetchall()
+    if len(artist) <= 0:
+        raise HTTPException(status_code=404, detail={"error": "No artist with this id"})
+    cursor.execute("INSERT INTO albums(title, artistId) VALUES (?,?)",
+                                        (request.title,request.artist_id))
+    app.db_connection.commit()
+    response.status_code = 201
+    return AlbumResponse(AlbumId=cursor.lastrowid, Title=request.title, ArtistId=request.artist_id)
 
 
 @app.get("/albums/{album_id}", response_model=AlbumResponse)
-async def display_album(album_id: int):
-	app.db_connection.row_factory = sqlite3.Row
-	album = app.db_connection.execute("SELECT * FROM albums WHERE albumId = ?",
-									    (album_id,)).fetchall()
-	if len(album) <= 0:
-		raise HTTPException(status_code=404, detail={"error": "Item not found"})
-	return AlbumResponse(AlbumId=album_id, Title=album[0]["title"], ArtistId=album[0]["artistId"])
+async def get_album(album_id: int):
+    app.db_connection.row_factory = sqlite3.Row
+    album = app.db_connection.execute("SELECT * FROM albums WHERE albumId = ?",
+                                        (album_id,)).fetchall()
+    if len(album) <= 0:
+        raise HTTPException(status_code=404, detail={"error": "Item not found"})
+    return AlbumResponse(AlbumId=album_id, Title=album[0]["title"], ArtistId=album[0]["artistId"])
+
+# 4
+
+class CustomerRequest(BaseModel):
+	company: str =''
+	address: str =''
+	city: str =''
+	state: str =''
+	country: str =''
+	postalcode: str =''
+	fax: str =''
 
 @app.put("/customers/{customer_id}")
-async def update_customer(customer_id: int, rq: dict = {}):
-	app.db_connection.row_factory = sqlite3.Row
-	customer = app.db_connection.execute("SELECT * FROM customers WHERE customerId = ?",
-											(customer_id,)).fetchall()
-	if len(customer) <= 0:
-		raise HTTPException(status_code=404, detail={"error": "Item not found"})
-	query = "UPDATE customers SET "
-	for key in rq:
-		query += f"{key} = \'{rq[key]}\', "
-	query = query[:-2]
-	query += " WHERE customerId = " + str(customer_id)
-	app.db_connection.execute(query)
-	app.db_connection.commit()
-	return app.db_connection.execute("SELECT * FROM customers WHERE customerId = ?",
-											(customer_id,)).fetchone()
+async def customer_edit(customer_id: int, request: CustomerRequest):
+    app.db_connection.row_factory = sqlite3.Row
+    cursor = app.db_connection.cursor()
+    name = cursor.execute(f'SELECT CustomerId FROM customers WHERE CustomerId = {customer_id}').fetchone()
+    if not name:
+        raise HTTPException(status_code=404, detail= {'error': "Customer not found"})
+    for x, y in request.__dict__.items():
+        if y:
+            cursor.execute(f'UPDATE customers SET {x} = "{y}" WHERE CustomerId = {customer_id}')
+            app.db_connection.commit()
+    return cursor.execute(f'SELECT * FROM customers WHERE CustomerId={customer_id}').fetchone()
 
-
+# 5,6
 @app.get("/sales")
-async def display_stats(category: str):
-	app.db_connection.row_factory = sqlite3.Row
-	stats = None
-	if category == "customers":
-		stats = app.db_connection.execute('''
-			SELECT c.customerId, email, phone, ROUND(SUM(total),2) AS Sum
-			FROM customers c 
-				JOIN invoices i ON c.customerId = i.customerId
-			GROUP BY c.customerId
-			ORDER BY Sum DESC, c.customerId;
-			''').fetchall()
-	elif category == "genres":
-		stats = app.db_connection.execute('''
-			SELECT g.name, SUM(quantity) AS Sum
-			FROM genres g 
-				JOIN tracks t ON t.genreId = g.genreId
-				JOIN invoice_items ii ON ii.trackId = t.trackId
-			GROUP BY g.name
-			ORDER BY Sum DESC, g.name
-			''').fetchall()
-	else:
-		raise HTTPException(status_code=404, detail={"error": "Item not found"})
-	return stats
+async def statistics(category: str):
+    app.db_connection.row_factory = sqlite3.Row
+    if category == "customers":
+        stats = app.db_connection.execute('''
+            SELECT c.customerId, email, phone, ROUND(SUM(total),2) AS Sum
+            FROM customers c 
+                JOIN invoices i ON c.customerId = i.customerId
+            GROUP BY c.customerId
+            ORDER BY Sum DESC, c.customerId;
+            ''').fetchall()
+    elif category == "genres":
+        stats = app.db_connection.execute('''
+            SELECT g.name, SUM(quantity) AS Sum
+            FROM genres g 
+                JOIN tracks t ON t.genreId = g.genreId
+                JOIN invoice_items ii ON ii.trackId = t.trackId
+            GROUP BY g.name
+            ORDER BY Sum DESC, g.name
+            ''').fetchall()
+    else:
+        raise HTTPException(status_code=404, detail={"error": "Category not found"})
+    return stats
+
